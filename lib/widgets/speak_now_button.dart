@@ -43,7 +43,7 @@ class SpeakNowButton extends ConsumerWidget {
             border: Border.all(
               color: speechState.isListening
                   ? AppColors.primary
-                  : Colors.transparent,
+                  : AppColors.accent,
               width: 4,
             ),
           ),

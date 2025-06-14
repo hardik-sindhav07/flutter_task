@@ -2,45 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-
-final List<Map<String, String>> fluencyQuestions = [
-  {
-    'en': "What's your name and where are you from?",
-    'hi': "आपका नाम क्या है और आप कहाँ से हैं?",
-  },
-  {
-    'en': "Why do you want to improve your English?",
-    'hi': "आप अपनी अंग्रेजी क्यों सुधारना चाहते हैं?",
-  },
-  {
-    'en': "Describe your favorite hobby or activity.",
-    'hi': "अपने पसंदीदा शौक या गतिविधि का वर्णन करें।",
-  },
-  {
-    'en': "Tell me about a memorable day in your life.",
-    'hi': "अपने जीवन के एक यादगार दिन के बारे में बताइए।",
-  },
-  {
-    'en': "What do you do for work or study?",
-    'hi': "आप क्या काम करते हैं या क्या पढ़ाई करते हैं?",
-  },
-  {
-    'en': "Who is someone you admire and why?",
-    'hi': "ऐसा कौन है जिसे आप पसंद करते हैं और क्यों?",
-  },
-  {
-    'en': "What are your goals for the next year?",
-    'hi': "अगले साल के लिए आपके क्या लक्ष्य हैं?",
-  },
-];
+import '../api/questions_api.dart';
+import '../models/questions_model.dart';
+import 'package:dio/dio.dart';
 
 final questionProvider = StateNotifierProvider<QuestionNotifier, int>((ref) => QuestionNotifier());
 
 class QuestionNotifier extends StateNotifier<int> {
   QuestionNotifier() : super(0);
 
-  void nextQuestion() {
-    if (state < fluencyQuestions.length - 1) {
+  void nextQuestion(int maxIndex) {
+    if (state < maxIndex - 1) {
       state++;
     }
   }
@@ -81,6 +53,8 @@ class SpeechState {
 
 class SpeechNotifier extends StateNotifier<SpeechState> {
   late stt.SpeechToText _speech;
+  DateTime? _startTime;
+  int lastDurationMs = 0;
   SpeechNotifier() : super(SpeechState()) {
     _speech = stt.SpeechToText();
     checkPermission();
@@ -106,7 +80,7 @@ class SpeechNotifier extends StateNotifier<SpeechState> {
       bool available = await _speech.initialize(
         onStatus: (status) {
           if (status == 'done' || status == 'notListening') {
-            state = state.copyWith(isListening: false);
+            stopRecording();
           }
         },
         onError: (error) {
@@ -115,6 +89,7 @@ class SpeechNotifier extends StateNotifier<SpeechState> {
       );
       if (available) {
         state = state.copyWith(isListening: true, error: '');
+        _startTime = DateTime.now();
         _speech.listen(
           onResult: (result) {
             state = state.copyWith(recognizedText: result.recognizedWords);
@@ -131,6 +106,10 @@ class SpeechNotifier extends StateNotifier<SpeechState> {
   void stopRecording() {
     _speech.stop();
     state = state.copyWith(isListening: false);
+    if (_startTime != null) {
+      lastDurationMs = DateTime.now().difference(_startTime!).inMilliseconds;
+      _startTime = null;
+    }
   }
 
   void cancelRecording() {
@@ -140,6 +119,10 @@ class SpeechNotifier extends StateNotifier<SpeechState> {
 
   void clearError() {
     state = state.copyWith(error: '');
+  }
+
+  void updateRecognizedText(String value) {
+    state = state.copyWith(recognizedText: value);
   }
 }
 
@@ -207,3 +190,53 @@ class ChatNotifier extends StateNotifier<List<ChatMessage>> {
     state = [];
   }
 }
+
+final questionsFutureProvider = FutureProvider<QuestionsModel>((ref) async {
+  final dio = Dio();
+  final questionsApi = QuestionsApi(dio);
+  return await questionsApi.fetchQuestions();
+});
+
+class EvaluationResult {
+  final String level;
+  final int vocabulary;
+  final int speakingFlow;
+  final int pronunciation;
+  final int grammar;
+
+  EvaluationResult({
+    required this.level,
+    required this.vocabulary,
+    required this.speakingFlow,
+    required this.pronunciation,
+    required this.grammar,
+  });
+
+  factory EvaluationResult.fromJson(Map<String, dynamic> data) {
+    return EvaluationResult(
+      level: data['level'] ?? 'Intermediate',
+      vocabulary: data['vocabulary'] ?? 60,
+      speakingFlow: data['speaking_flow'] ?? 90,
+      pronunciation: data['pronunciation'] ?? 70,
+      grammar: data['grammar'] ?? 40,
+    );
+  }
+}
+
+class EvaluationResultsNotifier extends StateNotifier<List<EvaluationResult>> {
+  EvaluationResultsNotifier() : super([]);
+
+  void addResult(EvaluationResult result) {
+    state = [...state, result];
+  }
+
+  void clear() {
+    state = [];
+  }
+}
+
+final evaluationResultsProvider =
+    StateNotifierProvider<EvaluationResultsNotifier, List<EvaluationResult>>(
+        (ref) => EvaluationResultsNotifier());
+
+final languageProvider = StateProvider<String>((ref) => 'hi');

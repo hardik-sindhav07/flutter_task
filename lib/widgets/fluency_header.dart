@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../state/speech_provider.dart';
 import 'progress_bar.dart';
 
 class FluencyHeader extends StatelessWidget {
   final int questionIndex;
-  const FluencyHeader({super.key, required this.questionIndex});
+  final int totalQuestions;
+  const FluencyHeader({super.key, required this.questionIndex, required this.totalQuestions});
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +68,7 @@ class FluencyHeader extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  ' out of 7',
+                  ' out of $totalQuestions',
                   style: AppTextStyles.body.copyWith(
                     color: AppColors.textPrimary,
                   ),
@@ -76,7 +76,7 @@ class FluencyHeader extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            ProgressBar(current: questionIndex + 1, total: fluencyQuestions.length),
+            ProgressBar(current: questionIndex + 1, total: totalQuestions),
           ],
         ),
       ),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_task/pages/landing_page.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_text_styles.dart';
-import 'widgets/fluency_test_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
         textTheme: AppTextStyles.textTheme,
       ),
-      home: const FluencyTestScreen(),
+      home: const LandingPage(),
     );
   }
 }
